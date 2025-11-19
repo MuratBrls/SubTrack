@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import Button from './Button';
+import { storageService } from '../services/storageService';
 import { Lock, Mail, User as UserIcon, LogIn, Sun, Moon } from 'lucide-react';
 
 interface AuthProps {
@@ -24,24 +25,20 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
 
     // Artificial delay for better UX
     setTimeout(() => {
-      if (!email || !password) {
+      const emailLower = email.toLowerCase().trim();
+
+      if (!emailLower || !password) {
         setError('Please fill in all fields');
         setLoading(false);
         return;
       }
 
-      const emailLower = email.toLowerCase().trim();
-
-      // Simulating Auth Logic with LocalStorage
-      const usersKey = 'subtrack_users';
-      const usersStr = localStorage.getItem(usersKey);
-      const users: Record<string, { name: string; password: string }> = usersStr ? JSON.parse(usersStr) : {};
-
       if (isLogin) {
-        // Login Logic
-        const user = users[emailLower];
-        if (user && user.password === password) {
-          onLogin({ id: emailLower, email: emailLower, name: user.name });
+        // Login Logic via Service
+        const user = storageService.validateUser(emailLower, password);
+        if (user) {
+          storageService.setCurrentUser(user);
+          onLogin(user);
         } else {
           setError('Invalid email or password');
         }
@@ -52,16 +49,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
           setLoading(false);
           return;
         }
-        if (users[emailLower]) {
-          setError('User with this email already exists');
-          setLoading(false);
-          return;
-        }
         
-        // Save new user
-        users[emailLower] = { name, password };
-        localStorage.setItem(usersKey, JSON.stringify(users));
-        onLogin({ id: emailLower, email: emailLower, name });
+        const newUser = { id: emailLower, email: emailLower, name, password };
+        const success = storageService.saveUser(newUser);
+        
+        if (success) {
+          // Auto login after register
+          const safeUser = { id: emailLower, email: emailLower, name };
+          storageService.setCurrentUser(safeUser);
+          onLogin(safeUser);
+        } else {
+          setError('User with this email already exists');
+        }
       }
       setLoading(false);
     }, 600);

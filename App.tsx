@@ -6,12 +6,10 @@ import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
 import Button from './components/Button';
 import Auth from './components/Auth';
+import { storageService } from './services/storageService';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('subtrack_current_user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(() => storageService.getCurrentUser());
 
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -42,43 +40,36 @@ const App: React.FC = () => {
   // Effect to load data when user changes
   useEffect(() => {
     if (user) {
-      try {
-        const storageKey = `subtrack_data_${user.id}`;
-        const saved = localStorage.getItem(storageKey);
-        const loadedSubs: Subscription[] = saved ? JSON.parse(saved) : [];
-        setSubscriptions(loadedSubs);
-        localStorage.setItem('subtrack_current_user', JSON.stringify(user));
+      const loadedSubs = storageService.getSubscriptions(user.id);
+      setSubscriptions(loadedSubs);
 
-        // Check for upcoming payments (due within 3 days)
-        const today = new Date();
-        const upcoming = loadedSubs.filter(sub => {
-          const due = new Date(sub.nextPaymentDate);
-          const diffTime = due.getTime() - today.getTime();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          return diffDays >= 0 && diffDays <= 3;
-        });
+      // Check for upcoming payments (due within 3 days)
+      const today = new Date();
+      const upcoming = loadedSubs.filter(sub => {
+        const due = new Date(sub.nextPaymentDate);
+        const diffTime = due.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 3;
+      });
 
-        if (upcoming.length > 0) {
-          setUpcomingSubs(upcoming);
-          setIsReminderOpen(true);
-        }
-      } catch (e) {
-        setSubscriptions([]);
+      if (upcoming.length > 0) {
+        setUpcomingSubs(upcoming);
+        setIsReminderOpen(true);
       }
     } else {
-      localStorage.removeItem('subtrack_current_user');
       setSubscriptions([]);
     }
   }, [user]);
 
-  // Persist to localStorage whenever subscriptions change
+  // Persist to storageService whenever subscriptions change
   useEffect(() => {
     if (user) {
-      localStorage.setItem(`subtrack_data_${user.id}`, JSON.stringify(subscriptions));
+      storageService.saveSubscriptions(user.id, subscriptions);
     }
   }, [subscriptions, user]);
 
   const handleLogout = () => {
+    storageService.setCurrentUser(null);
     setUser(null);
     setSubscriptions([]);
   };

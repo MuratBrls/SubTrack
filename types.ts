@@ -25,6 +25,15 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   [Currency.TRY]: '₺'
 };
 
+export interface PaymentRecord {
+  id: string;
+  date: string;
+  amount: number;
+  currency: Currency;
+  subscriptionName: string;
+  category: Category;
+}
+
 export interface Subscription {
   id: string;
   name: string;
@@ -38,6 +47,8 @@ export interface Subscription {
   // New fields for credentials
   accountEmail?: string;
   accountPassword?: string;
+  // History
+  paymentHistory?: PaymentRecord[];
 }
 
 export interface User {

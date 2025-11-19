@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download, Key } from 'lucide-react';
-import { Subscription, CATEGORY_COLORS, BillingCycle, User, Currency, CURRENCY_SYMBOLS } from './types';
+import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download, Key, Zap, Search, CheckCircle, History as HistoryIcon } from 'lucide-react';
+import { Subscription, CATEGORY_COLORS, BillingCycle, User, Currency, CURRENCY_SYMBOLS, PaymentRecord } from './types';
 import Modal from './components/Modal';
 import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
+import HistoryView from './components/HistoryView';
 import Button from './components/Button';
 import AuthComponent from './components/Auth';
 import VaultModal from './components/VaultModal';
@@ -12,6 +13,7 @@ import { storageService } from './services/storageService';
 import { auth, onAuthStateChanged, signOut } from './services/firebase';
 
 const App: React.FC = () => {
+  // Initialize user from localStorage to prevent flash of login screen on reload
   const [user, setUser] = useState<User | null>(() => storageService.getCurrentUser());
 
   const [darkMode, setDarkMode] = useState(() => {
@@ -22,8 +24,19 @@ const App: React.FC = () => {
     return false;
   });
 
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics'>('dashboard');
+  // FIX: Initialize subscriptions from storage if user exists.
+  // If we start with [], the useEffect that saves to localStorage will overwrite existing data on first render.
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const currentUser = storageService.getCurrentUser();
+    if (currentUser) {
+      return storageService.getSubscriptions(currentUser.id);
+    }
+    return [];
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'history'>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subscription | null>(null);
@@ -36,6 +49,16 @@ const App: React.FC = () => {
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Check for API Key
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  useEffect(() => {
+    if (process.env.API_KEY) {
+      setHasApiKey(true);
+      console.log("Gemini API Key detected and ready.");
+    }
+  }, []);
 
   // Apply Dark Mode
   useEffect(() => {
@@ -58,7 +81,7 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Auth Persistence Listener
+  // 1. Auth Persistence Listener (Firebase)
   useEffect(() => {
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -72,30 +95,50 @@ const App: React.FC = () => {
             hasVaultPin: storageService.validateVaultPin(firebaseUser.uid, '') ? false : !!localStorage.getItem(`subtrack_vault_pin_${firebaseUser.uid}`)
           };
           
-          // Only update if different to avoid loops
-          if (!user || user.id !== appUser.id) {
-            setUser(appUser);
-            storageService.setCurrentUser(appUser);
-          }
+          setUser(appUser);
+        } else {
+          // If Firebase explicitly says no user (logout or session expired), clear local state
+          setUser(null);
+          storageService.setCurrentUser(null);
         }
       });
       return () => unsubscribe();
     }
+  }, []);
+
+  // 2. Generic Persistence Listener
+  // Ensures that whenever 'user' state changes (Mock or Real), it is saved to localStorage.
+  useEffect(() => {
+    storageService.setCurrentUser(user);
   }, [user]);
 
-  // Effect to load data when user changes
+  // Robust helper for date calculation (handles local time properly)
+  const getDaysUntilDue = (dateStr: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Parse YYYY-MM-DD strictly as local parts to avoid UTC conversion quirks
+    const [year, month, day] = dateStr.split('-').map(Number);
+    // Note: month is 0-indexed in JS Date
+    const due = new Date(year, month - 1, day);
+    
+    const diffTime = due.getTime() - today.getTime();
+    // Math.round handles DST shifts (23h/25h days) better than ceil/floor for day diffs
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Effect to load data when user changes and check for reminders
   useEffect(() => {
     if (user) {
+      // We load from storage here to ensure sync, even though we initialized state from storage.
+      // This handles cases where user switches accounts or data changed externally.
       const loadedSubs = storageService.getSubscriptions(user.id);
       setSubscriptions(loadedSubs);
 
-      // Check for upcoming payments (due within 3 days)
-      const today = new Date();
+      // Check for upcoming payments (due within 3 days, including today)
       const upcoming = loadedSubs.filter(sub => {
-        const due = new Date(sub.nextPaymentDate);
-        const diffTime = due.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays <= 3;
+        const days = getDaysUntilDue(sub.nextPaymentDate);
+        return days >= 0 && days <= 3;
       });
 
       if (upcoming.length > 0) {
@@ -105,11 +148,14 @@ const App: React.FC = () => {
     } else {
       setSubscriptions([]);
     }
-  }, [user]);
+  }, [user?.id]); // Only reload if user ID changes
 
-  // Persist to storageService whenever subscriptions change
+  // Persist subscriptions to storageService whenever they change
   useEffect(() => {
     if (user) {
+      // IMPORTANT: This writes current state to storage. 
+      // Because we initialized 'subscriptions' from storage (see useState above), 
+      // the first run of this effect writes the same data back, protecting it.
       storageService.saveSubscriptions(user.id, subscriptions);
     }
   }, [subscriptions, user]);
@@ -122,15 +168,15 @@ const App: React.FC = () => {
         console.error("Error signing out", error);
       }
     }
-    storageService.setCurrentUser(null);
     setUser(null);
-    setSubscriptions([]);
+    // storageService.setCurrentUser(null) is handled by the useEffect on [user]
   };
 
   const handleAddSubscription = (data: Omit<Subscription, 'id'>) => {
     const newSub: Subscription = {
       ...data,
       id: crypto.randomUUID(),
+      paymentHistory: []
     };
     setSubscriptions([...subscriptions, newSub]);
     setIsModalOpen(false);
@@ -138,7 +184,7 @@ const App: React.FC = () => {
 
   const handleEditSubscription = (data: Omit<Subscription, 'id'>) => {
     if (!editingSub) return;
-    const updatedSubs = subscriptions.map(s => s.id === editingSub.id ? { ...data, id: editingSub.id } : s);
+    const updatedSubs = subscriptions.map(s => s.id === editingSub.id ? { ...data, id: editingSub.id, paymentHistory: s.paymentHistory || [] } : s);
     setSubscriptions(updatedSubs);
     setEditingSub(null);
     setIsModalOpen(false);
@@ -148,6 +194,55 @@ const App: React.FC = () => {
     if (confirm('Are you sure you want to delete this subscription?')) {
       setSubscriptions(subscriptions.filter(s => s.id !== id));
     }
+  };
+
+  // MARK AS PAID LOGIC
+  const handleMarkAsPaid = (sub: Subscription) => {
+    if (!confirm(`Mark ${sub.name} as paid for ${sub.nextPaymentDate}? This will move it to History and update the next due date.`)) {
+      return;
+    }
+
+    // 1. Create History Record
+    const newRecord: PaymentRecord = {
+      id: crypto.randomUUID(),
+      date: sub.nextPaymentDate,
+      amount: sub.price,
+      currency: sub.currency,
+      subscriptionName: sub.name,
+      category: sub.category
+    };
+
+    // 2. Calculate Next Date
+    const [year, month, day] = sub.nextPaymentDate.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    
+    if (sub.cycle === BillingCycle.MONTHLY) {
+      dateObj.setMonth(dateObj.getMonth() + 1);
+    } else if (sub.cycle === BillingCycle.YEARLY) {
+      dateObj.setFullYear(dateObj.getFullYear() + 1);
+    } else if (sub.cycle === BillingCycle.WEEKLY) {
+      dateObj.setDate(dateObj.getDate() + 7);
+    }
+
+    // Format back to YYYY-MM-DD
+    const nextYear = dateObj.getFullYear();
+    const nextMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const nextDay = String(dateObj.getDate()).padStart(2, '0');
+    const newDateStr = `${nextYear}-${nextMonth}-${nextDay}`;
+
+    // 3. Update State
+    const updatedSubs = subscriptions.map(s => {
+      if (s.id === sub.id) {
+        return {
+          ...s,
+          nextPaymentDate: newDateStr,
+          paymentHistory: [...(s.paymentHistory || []), newRecord]
+        };
+      }
+      return s;
+    });
+
+    setSubscriptions(updatedSubs);
   };
 
   const handleInstallClick = async () => {
@@ -179,18 +274,11 @@ const App: React.FC = () => {
     setIsVaultModalOpen(false);
     // Ensure user knows they have a PIN set now if it was setup
     if (user && !user.hasVaultPin) {
+        // Re-read from storage to get updated status
         const updatedUser = storageService.getCurrentUser();
         if(updatedUser) setUser(updatedUser);
     }
     setIsCredentialsModalOpen(true);
-  };
-
-  const getDaysUntilDue = (dateStr: string) => {
-    const today = new Date();
-    const due = new Date(dateStr);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
   };
 
   const calculateTotalMonthly = (currencyCode: Currency) => {
@@ -212,6 +300,10 @@ const App: React.FC = () => {
     const totalUSD = calculateTotalMonthly(Currency.USD);
     const totalEUR = calculateTotalMonthly(Currency.EUR);
     const totalTRY = calculateTotalMonthly(Currency.TRY);
+
+    const filteredSubscriptions = subscriptions.filter(sub => 
+      sub.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
       <div className="space-y-6 pb-24">
@@ -277,19 +369,36 @@ const App: React.FC = () => {
 
         {/* Subscription List */}
         <div className="bg-white dark:bg-slate-800 shadow-sm rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
-          <div className="px-6 py-5 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Your Subscriptions</h3>
-            <Button size="sm" onClick={openAddModal} className="sm:hidden h-10 w-10 rounded-full p-0 flex items-center justify-center">
-              <Plus className="w-5 h-5" />
-            </Button>
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex justify-between items-center">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Your Subscriptions</h3>
+                <Button size="sm" onClick={openAddModal} className="sm:hidden h-10 w-10 rounded-full p-0 flex items-center justify-center">
+                    <Plus className="w-5 h-5" />
+                </Button>
+            </div>
+            
+            <div className="relative w-full sm:max-w-xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg leading-5 bg-gray-50 dark:bg-slate-900/50 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                    placeholder="Search subscriptions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
           </div>
           <ul role="list" className="divide-y divide-gray-200 dark:divide-slate-700">
-            {subscriptions.length === 0 && (
+            {filteredSubscriptions.length === 0 && (
               <li className="px-6 py-12 text-center text-gray-500 dark:text-slate-400">
-                No subscriptions yet. Add one to get started!
+                {subscriptions.length === 0 
+                    ? 'No subscriptions yet. Add one to get started!' 
+                    : 'No subscriptions found matching your search.'}
               </li>
             )}
-            {subscriptions.map((sub) => {
+            {filteredSubscriptions.map((sub) => {
               const daysLeft = getDaysUntilDue(sub.nextPaymentDate);
               const categoryColor = CATEGORY_COLORS[sub.category] || '#9ca3af';
               const symbol = CURRENCY_SYMBOLS[sub.currency];
@@ -325,6 +434,15 @@ const App: React.FC = () => {
                         <p className="text-xs text-gray-500 dark:text-slate-400">{sub.currency}</p>
                       </div>
                       <div className="flex space-x-1">
+                         {/* Mark Paid Button */}
+                         <button
+                          onClick={() => handleMarkAsPaid(sub)}
+                          className="text-gray-300 hover:text-green-600 dark:text-slate-600 dark:hover:text-green-400 transition-colors p-2 rounded-full hover:bg-green-50 dark:hover:bg-slate-700"
+                          title="Mark as Paid"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </button>
+
                          {/* Credential Vault Button */}
                          <button 
                           onClick={() => openVault(sub)}
@@ -352,6 +470,13 @@ const App: React.FC = () => {
     );
   };
 
+  const renderContent = () => {
+    if (activeTab === 'dashboard') return renderDashboard();
+    if (activeTab === 'analytics') return <Analytics subscriptions={subscriptions} />;
+    if (activeTab === 'history') return <HistoryView subscriptions={subscriptions} />;
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200 font-sans pb-safe">
       {/* Navbar */}
@@ -362,7 +487,10 @@ const App: React.FC = () => {
               <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-md shadow-indigo-500/30">
                 <CreditCard className="w-6 h-6" />
               </div>
-              <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">SubTrack</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white leading-none">SubTrack</span>
+                {hasApiKey && <span className="text-[0.6rem] text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wider flex items-center gap-0.5"><Zap className="w-2 h-2" fill="currentColor"/> AI Enabled</span>}
+              </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Install App Button (Only shows if installable) */}
@@ -426,12 +554,23 @@ const App: React.FC = () => {
               <ChartIcon className="w-4 h-4 mr-2" />
               Analytics & AI
             </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`${
+                activeTab === 'history'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center transition-colors touch-manipulation`}
+            >
+              <HistoryIcon className="w-4 h-4 mr-2" />
+              Payment History
+            </button>
           </nav>
         </div>
 
         {/* Content */}
         <div className="animate-fade-in">
-          {activeTab === 'dashboard' ? renderDashboard() : <Analytics subscriptions={subscriptions} />}
+          {renderContent()}
         </div>
       </main>
 
@@ -521,7 +660,19 @@ const App: React.FC = () => {
                      <p className="text-xs text-gray-500 dark:text-slate-400">Due: {new Date(sub.nextPaymentDate).toLocaleDateString()}</p>
                    </div>
                  </div>
-                 <span className="font-bold text-gray-900 dark:text-white">{CURRENCY_SYMBOLS[sub.currency]}{sub.price}</span>
+                 <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 dark:text-white mr-2">{CURRENCY_SYMBOLS[sub.currency]}{sub.price}</span>
+                    <button
+                          onClick={() => {
+                            handleMarkAsPaid(sub);
+                            // Optional: remove from reminder list if we wanted to get fancy, but state update will handle refreshing logic next load
+                          }}
+                          className="text-gray-300 hover:text-green-600 dark:text-slate-600 dark:hover:text-green-400 transition-colors p-1 rounded-full"
+                          title="Mark as Paid"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                    </button>
+                 </div>
                </li>
              ))}
            </ul>

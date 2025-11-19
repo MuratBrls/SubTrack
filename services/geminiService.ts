@@ -1,13 +1,28 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Subscription, AnalysisResult, Category } from "../types";
 
+let aiClientInstance: GoogleGenAI | null = null;
+let hasWarned = false;
+
 const getAIClient = () => {
+  if (aiClientInstance) return aiClientInstance;
+
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    console.warn("API Key is missing. AI features will be disabled.");
+    if (!hasWarned) {
+      console.warn("API Key is missing. AI features will be disabled. Please provide process.env.API_KEY");
+      hasWarned = true;
+    }
     return null;
   }
-  return new GoogleGenAI({ apiKey });
+
+  try {
+    aiClientInstance = new GoogleGenAI({ apiKey });
+    return aiClientInstance;
+  } catch (error) {
+    console.error("Failed to initialize Gemini client:", error);
+    return null;
+  }
 };
 
 export const analyzeSubscriptions = async (subscriptions: Subscription[]): Promise<AnalysisResult | null> => {
@@ -82,6 +97,7 @@ export const suggestCategory = async (name: string): Promise<Category> => {
     }
     return Category.OTHER;
   } catch (e) {
+    console.warn("AI categorization failed, falling back to OTHER.");
     return Category.OTHER;
   }
 }

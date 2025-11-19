@@ -35,12 +35,16 @@ export interface Subscription {
   category: Category;
   description?: string;
   logoUrl?: string;
+  // New fields for credentials
+  accountEmail?: string;
+  accountPassword?: string;
 }
 
 export interface User {
   id: string;
   email: string;
   name: string;
+  hasVaultPin?: boolean; // To check if user set up a PIN
 }
 
 export interface AnalysisResult {

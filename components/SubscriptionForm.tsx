@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Subscription, BillingCycle, Category, Currency, CURRENCY_SYMBOLS } from '../types';
 import Button from './Button';
 import { suggestCategory } from '../services/geminiService';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Shield, Eye, EyeOff } from 'lucide-react';
 
 interface SubscriptionFormProps {
   initialData?: Subscription | null;
@@ -18,6 +18,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
   const [category, setCategory] = useState<Category>(initialData?.category || Category.OTHER);
   const [nextPaymentDate, setNextPaymentDate] = useState(initialData?.nextPaymentDate || new Date().toISOString().split('T')[0]);
   
+  const [accountEmail, setAccountEmail] = useState(initialData?.accountEmail || '');
+  const [accountPassword, setAccountPassword] = useState(initialData?.accountPassword || '');
+  const [showPassword, setShowPassword] = useState(false);
+
   const [isAutoCategorizing, setIsAutoCategorizing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,6 +33,8 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
       cycle,
       category,
       nextPaymentDate,
+      accountEmail,
+      accountPassword,
       logoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`
     });
   };
@@ -137,6 +143,44 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
             onChange={(e) => setNextPaymentDate(e.target.value)}
             className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
           />
+        </div>
+      </div>
+      
+      <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Credentials (Stored Securely)</h4>
+        </div>
+        <div className="space-y-3">
+          <div>
+             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Account Email/Username</label>
+             <input
+                type="text"
+                value={accountEmail}
+                onChange={(e) => setAccountEmail(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+                placeholder="Optional"
+              />
+          </div>
+          <div>
+             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Account Password</label>
+             <div className="relative mt-1">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={accountPassword}
+                  onChange={(e) => setAccountPassword(e.target.value)}
+                  className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm pr-10"
+                  placeholder="Optional"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+             </div>
+          </div>
         </div>
       </div>
 

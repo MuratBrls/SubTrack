@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download } from 'lucide-react';
+import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download, Key } from 'lucide-react';
 import { Subscription, CATEGORY_COLORS, BillingCycle, User, Currency, CURRENCY_SYMBOLS } from './types';
 import Modal from './components/Modal';
 import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
 import Button from './components/Button';
 import Auth from './components/Auth';
+import VaultModal from './components/VaultModal';
+import CredentialsModal from './components/CredentialsModal';
 import { storageService } from './services/storageService';
 
 const App: React.FC = () => {
@@ -26,6 +28,11 @@ const App: React.FC = () => {
   const [editingSub, setEditingSub] = useState<Subscription | null>(null);
   const [upcomingSubs, setUpcomingSubs] = useState<Subscription[]>([]);
   
+  // Vault States
+  const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const [vaultTargetSub, setVaultTargetSub] = useState<Subscription | null>(null);
+
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -43,9 +50,7 @@ const App: React.FC = () => {
   // PWA Install Event Listener
   useEffect(() => {
     const handler = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
@@ -114,9 +119,7 @@ const App: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    // Show the install prompt
     deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
@@ -131,6 +134,22 @@ const App: React.FC = () => {
   const openAddModal = () => {
     setEditingSub(null);
     setIsModalOpen(true);
+  };
+
+  // Vault Logic
+  const openVault = (sub: Subscription) => {
+    setVaultTargetSub(sub);
+    setIsVaultModalOpen(true);
+  };
+
+  const onVaultSuccess = () => {
+    setIsVaultModalOpen(false);
+    // Ensure user knows they have a PIN set now if it was setup
+    if (user && !user.hasVaultPin) {
+        const updatedUser = storageService.getCurrentUser();
+        if(updatedUser) setUser(updatedUser);
+    }
+    setIsCredentialsModalOpen(true);
   };
 
   const getDaysUntilDue = (dateStr: string) => {
@@ -241,6 +260,7 @@ const App: React.FC = () => {
               const daysLeft = getDaysUntilDue(sub.nextPaymentDate);
               const categoryColor = CATEGORY_COLORS[sub.category] || '#9ca3af';
               const symbol = CURRENCY_SYMBOLS[sub.currency];
+              const hasCredentials = sub.accountEmail || sub.accountPassword;
               
               return (
                 <li key={sub.id} className="px-4 sm:px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
@@ -272,6 +292,15 @@ const App: React.FC = () => {
                         <p className="text-xs text-gray-500 dark:text-slate-400">{sub.currency}</p>
                       </div>
                       <div className="flex space-x-1">
+                         {/* Credential Vault Button */}
+                         <button 
+                          onClick={() => openVault(sub)}
+                          className={`transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 ${hasCredentials ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 hover:text-gray-400 dark:text-slate-600 dark:hover:text-slate-500'}`}
+                          title="View Credentials"
+                        >
+                          <Key className="w-5 h-5" />
+                        </button>
+
                         <button onClick={() => openEditModal(sub)} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
                           <Edit2 className="w-5 h-5" />
                         </button>
@@ -405,6 +434,35 @@ const App: React.FC = () => {
           onSubmit={editingSub ? handleEditSubscription : handleAddSubscription}
           onCancel={() => setIsModalOpen(false)}
         />
+      </Modal>
+
+      {/* Vault PIN Modal */}
+      <Modal
+        isOpen={isVaultModalOpen}
+        onClose={() => setIsVaultModalOpen(false)}
+        title=""
+      >
+        {user && (
+          <VaultModal 
+            user={user} 
+            onSuccess={onVaultSuccess} 
+            onCancel={() => setIsVaultModalOpen(false)} 
+          />
+        )}
+      </Modal>
+
+      {/* Credentials Display Modal */}
+      <Modal
+        isOpen={isCredentialsModalOpen}
+        onClose={() => setIsCredentialsModalOpen(false)}
+        title=""
+      >
+        {vaultTargetSub && (
+          <CredentialsModal 
+            subscription={vaultTargetSub} 
+            onClose={() => setIsCredentialsModalOpen(false)} 
+          />
+        )}
       </Modal>
 
       {/* Payment Reminder Modal */}

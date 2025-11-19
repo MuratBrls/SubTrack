@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun } from 'lucide-react';
+import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download } from 'lucide-react';
 import { Subscription, CATEGORY_COLORS, BillingCycle, User, Currency, CURRENCY_SYMBOLS } from './types';
 import Modal from './components/Modal';
 import SubscriptionForm from './components/SubscriptionForm';
@@ -25,6 +25,9 @@ const App: React.FC = () => {
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subscription | null>(null);
   const [upcomingSubs, setUpcomingSubs] = useState<Subscription[]>([]);
+  
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Apply Dark Mode
   useEffect(() => {
@@ -36,6 +39,18 @@ const App: React.FC = () => {
       localStorage.setItem('subtrack_theme', 'light');
     }
   }, [darkMode]);
+
+  // PWA Install Event Listener
+  useEffect(() => {
+    const handler = (e: any) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   // Effect to load data when user changes
   useEffect(() => {
@@ -94,6 +109,17 @@ const App: React.FC = () => {
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this subscription?')) {
       setSubscriptions(subscriptions.filter(s => s.id !== id));
+    }
+  };
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
     }
   };
 
@@ -277,6 +303,17 @@ const App: React.FC = () => {
               <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">SubTrack</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Install App Button (Only shows if installable) */}
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstallClick}
+                  className="hidden sm:flex items-center px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Install App
+                </button>
+              )}
+
                <button
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full focus:outline-none transition-colors touch-manipulation"
@@ -338,7 +375,16 @@ const App: React.FC = () => {
 
       {/* Floating Action Button for Mobile */}
       {activeTab === 'dashboard' && (
-        <div className="fixed bottom-6 right-6 z-40 sm:hidden pb-safe pr-safe">
+        <div className="fixed bottom-6 right-6 z-40 sm:hidden pb-safe pr-safe flex flex-col gap-3">
+           {deferredPrompt && (
+            <Button 
+              onClick={handleInstallClick} 
+              className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center p-0 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-slate-600"
+              variant="secondary"
+            >
+              <Download className="w-6 h-6" />
+            </Button>
+          )}
           <Button 
             onClick={openAddModal} 
             className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center p-0 bg-indigo-600 hover:bg-indigo-700 text-white"

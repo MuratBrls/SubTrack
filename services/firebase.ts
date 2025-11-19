@@ -4,13 +4,17 @@ import {
   GoogleAuthProvider, 
   OAuthProvider, 
   signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
   Auth
 } from 'firebase/auth';
 
 // TODO: REPLACE THIS WITH YOUR REAL FIREBASE CONFIGURATION
 // 1. Go to console.firebase.google.com
 // 2. Create a new project
-// 3. Enable Authentication -> Sign-in method -> Google & Apple
+// 3. Enable Authentication -> Sign-in method -> Google, Apple, and Email/Password
 // 4. Copy the config object below
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY_HERE",
@@ -44,5 +48,14 @@ try {
   console.error("Firebase initialization error:", error);
 }
 
-export { auth, googleProvider, appleProvider, signInWithPopup };
+export { 
+  auth, 
+  googleProvider, 
+  appleProvider, 
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+};
 export const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";

@@ -3,7 +3,7 @@ import { User } from '../types';
 import Button from './Button';
 import { storageService } from '../services/storageService';
 import { Lock, Mail, User as UserIcon, LogIn, Sun, Moon, AlertTriangle } from 'lucide-react';
-import { auth, googleProvider, appleProvider, signInWithPopup, isConfigured } from '../services/firebase';
+import { auth, googleProvider, appleProvider, signInWithPopup, isConfigured, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../services/firebase';
 import { UserCredential } from 'firebase/auth';
 
 interface AuthProps {
@@ -25,48 +25,64 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
     setError('');
     setLoading(true);
 
-    // Email/Password still uses local storage for simplicity in this demo, 
-    // but could be switched to auth.createUserWithEmailAndPassword
-    setTimeout(() => {
+    try {
       const emailLower = email.toLowerCase().trim();
 
       if (!emailLower || !password) {
-        setError('Please fill in all fields');
-        setLoading(false);
-        return;
+        throw new Error('Please fill in all fields');
       }
 
-      if (isLogin) {
-        // Login Logic via Service
-        const user = storageService.validateUser(emailLower, password);
-        if (user) {
-          storageService.setCurrentUser(user);
-          onLogin(user);
+      // Use Firebase Auth if Configured
+      if (isConfigured && auth) {
+        if (isLogin) {
+          const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
+          // onAuthStateChanged in App.tsx will handle the state update
         } else {
-          setError('Invalid email or password');
+          if (!name) throw new Error('Please enter your name');
+          const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
+          // Note: We could updateProfile here to set display name on Firebase, but for now we rely on local state sync logic
+          // Storing the name locally for the hybrid approach
+          storageService.saveUser({
+             id: userCredential.user.uid,
+             email: emailLower,
+             name: name,
+             authType: 'email'
+          });
         }
       } else {
-        // Register Logic
-        if (!name) {
-          setError('Please enter your name');
-          setLoading(false);
-          return;
-        }
-        
-        const newUser = { id: emailLower, email: emailLower, name, password, authType: 'email' as const };
-        const success = storageService.saveUser(newUser);
-        
-        if (success) {
-          // Auto login after register
-          const safeUser = { id: emailLower, email: emailLower, name, hasVaultPin: false };
-          storageService.setCurrentUser(safeUser);
-          onLogin(safeUser);
+        // Fallback to Mock Auth (Local Storage)
+        // Artificial delay for UX
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        if (isLogin) {
+          const user = storageService.validateUser(emailLower, password);
+          if (user) {
+            storageService.setCurrentUser(user);
+            onLogin(user);
+          } else {
+            throw new Error('Invalid email or password');
+          }
         } else {
-          setError('User with this email already exists');
+          if (!name) throw new Error('Please enter your name');
+          
+          const newUser = { id: emailLower, email: emailLower, name, password, authType: 'email' as const };
+          const success = storageService.saveUser(newUser);
+          
+          if (success) {
+            const safeUser = { id: emailLower, email: emailLower, name, hasVaultPin: false };
+            storageService.setCurrentUser(safeUser);
+            onLogin(safeUser);
+          } else {
+            throw new Error('User with this email already exists');
+          }
         }
       }
+    } catch (err: any) {
+      console.error("Auth Error:", err);
+      setError(err.message || 'Authentication failed');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const handleSocialLogin = async (providerName: 'google' | 'apple') => {
@@ -87,17 +103,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
       
       // Transform Firebase user to App user
       const appUser: User = {
-        id: fbUser.email || fbUser.uid,
+        id: fbUser.uid, // Use UID for consistency
         email: fbUser.email || `user_${fbUser.uid}@anon.com`,
         name: fbUser.displayName || 'User',
-        hasVaultPin: false // Will be checked/updated by storageService logic if exists
+        hasVaultPin: false 
       };
 
-      // Check if this user already has data in local storage, or init them
-      // We mix Real Auth with Local Data Storage for this architecture
+      // Store user reference locally to keep consistent ID structure
       const existingUsers = storageService.getUsers();
-      
-      // Note: We don't store social passwords locally, just the user reference
       if (!existingUsers[appUser.email]) {
         storageService.saveUser({
            ...appUser,
@@ -105,13 +118,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
         });
       }
 
-      // Set session
+      // Set session (though onAuthStateChanged will likely catch this too)
       storageService.setCurrentUser(appUser);
       onLogin(appUser);
 
     } catch (err: any) {
       console.error("Auth Error:", err);
-      // Friendly error messages
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Login cancelled.');
       } else if (err.code === 'auth/configuration-not-found') {
@@ -157,7 +169,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, toggleTheme, isDarkMode }) => {
               </div>
               <div className="ml-3">
                 <p className="text-xs text-amber-700 dark:text-amber-200">
-                  To enable real Google/Apple login, please update <code>services/firebase.ts</code> with your API keys.
+                  To enable real Auth persistence, update <code>services/firebase.ts</code> with your API keys.
                 </p>
               </div>
             </div>

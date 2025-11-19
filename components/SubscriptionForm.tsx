@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Subscription, BillingCycle, Category, Currency, CURRENCY_SYMBOLS } from '../types';
 import Button from './Button';
 import { suggestCategory } from '../services/geminiService';
-import { Sparkles, Shield, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Shield, Eye, EyeOff, Calendar as CalendarIcon, List } from 'lucide-react';
 
 interface SubscriptionFormProps {
   initialData?: Subscription | null;
@@ -18,11 +18,61 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
   const [category, setCategory] = useState<Category>(initialData?.category || Category.OTHER);
   const [nextPaymentDate, setNextPaymentDate] = useState(initialData?.nextPaymentDate || new Date().toISOString().split('T')[0]);
   
+  // Date Selection Mode State
+  const [dateMode, setDateMode] = useState<'picker' | 'manual'>('picker');
+  const [manualDay, setManualDay] = useState(new Date().getDate());
+  const [manualMonth, setManualMonth] = useState(new Date().getMonth()); // 0-11
+  const [manualYear, setManualYear] = useState(new Date().getFullYear());
+
   const [accountEmail, setAccountEmail] = useState(initialData?.accountEmail || '');
   const [accountPassword, setAccountPassword] = useState(initialData?.accountPassword || '');
   const [showPassword, setShowPassword] = useState(false);
 
   const [isAutoCategorizing, setIsAutoCategorizing] = useState(false);
+
+  // Helper arrays for manual date selection
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i);
+
+  // Sync manual state when date changes externally or on init
+  useEffect(() => {
+    const d = new Date(nextPaymentDate);
+    if (!isNaN(d.getTime())) {
+      setManualDay(d.getDate());
+      setManualMonth(d.getMonth());
+      setManualYear(d.getFullYear());
+    }
+  }, []); // Run once on mount or when switching modes conceptually if we wanted strict sync
+
+  const handleManualDateChange = (d: number, m: number, y: number) => {
+    setManualDay(d);
+    setManualMonth(m);
+    setManualYear(y);
+    
+    // Construct YYYY-MM-DD string
+    // Note: Javascript Date month is 0-indexed
+    const newDate = new Date(y, m, d);
+    // Use locale time offset trick or manual string construction to avoid timezone issues
+    const yearStr = newDate.getFullYear();
+    const monthStr = String(newDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(newDate.getDate()).padStart(2, '0');
+    setNextPaymentDate(`${yearStr}-${monthStr}-${dayStr}`);
+  };
+
+  const handlePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNextPaymentDate(val);
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      setManualDay(d.getUTCDate()); // Use UTC to avoid shifting due to timezone when parsing purely YYYY-MM-DD
+      setManualMonth(d.getUTCMonth());
+      setManualYear(d.getUTCFullYear());
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,31 +169,73 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Category</label>
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
-          >
-            {Object.values(Category).map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Next Payment</label>
-          <input
-            type="date"
-            id="date"
-            required
-            value={nextPaymentDate}
-            onChange={(e) => setNextPaymentDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
-          />
-        </div>
+      <div>
+         <div className="flex justify-between items-center mb-1">
+            <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Next Payment</label>
+            <button 
+              type="button" 
+              onClick={() => setDateMode(dateMode === 'picker' ? 'manual' : 'picker')}
+              className="text-xs flex items-center text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              {dateMode === 'picker' ? <List className="w-3 h-3 mr-1"/> : <CalendarIcon className="w-3 h-3 mr-1"/>}
+              {dateMode === 'picker' ? 'Switch to Manual Selection' : 'Switch to Calendar'}
+            </button>
+         </div>
+
+         {dateMode === 'picker' ? (
+            <input
+              type="date"
+              id="date"
+              required
+              value={nextPaymentDate}
+              onChange={handlePickerChange}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+            />
+         ) : (
+           <div className="grid grid-cols-3 gap-2 mt-1">
+              <select
+                value={manualDay}
+                onChange={(e) => handleManualDateChange(Number(e.target.value), manualMonth, manualYear)}
+                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+              >
+                {days.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select
+                value={manualMonth}
+                onChange={(e) => handleManualDateChange(manualDay, Number(e.target.value), manualYear)}
+                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+              >
+                {months.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={manualYear}
+                onChange={(e) => handleManualDateChange(manualDay, manualMonth, Number(e.target.value))}
+                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+              >
+                {years.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+           </div>
+         )}
+      </div>
+
+      <div>
+        <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Category</label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as Category)}
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+        >
+          {Object.values(Category).map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
       
       <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-2">

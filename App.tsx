@@ -5,10 +5,11 @@ import Modal from './components/Modal';
 import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
 import Button from './components/Button';
-import Auth from './components/Auth';
+import AuthComponent from './components/Auth';
 import VaultModal from './components/VaultModal';
 import CredentialsModal from './components/CredentialsModal';
 import { storageService } from './services/storageService';
+import { auth, onAuthStateChanged, signOut } from './services/firebase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => storageService.getCurrentUser());
@@ -57,6 +58,31 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  // Auth Persistence Listener
+  useEffect(() => {
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        if (firebaseUser) {
+          // Sync Firebase session to local app state
+          const appUser: User = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            // Check vault status from local storage as it's device specific in this hybrid model
+            hasVaultPin: storageService.validateVaultPin(firebaseUser.uid, '') ? false : !!localStorage.getItem(`subtrack_vault_pin_${firebaseUser.uid}`)
+          };
+          
+          // Only update if different to avoid loops
+          if (!user || user.id !== appUser.id) {
+            setUser(appUser);
+            storageService.setCurrentUser(appUser);
+          }
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
+
   // Effect to load data when user changes
   useEffect(() => {
     if (user) {
@@ -88,7 +114,14 @@ const App: React.FC = () => {
     }
   }, [subscriptions, user]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (auth) {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("Error signing out", error);
+      }
+    }
     storageService.setCurrentUser(null);
     setUser(null);
     setSubscriptions([]);
@@ -172,7 +205,7 @@ const App: React.FC = () => {
   };
 
   if (!user) {
-    return <Auth onLogin={setUser} toggleTheme={() => setDarkMode(!darkMode)} isDarkMode={darkMode} />;
+    return <AuthComponent onLogin={setUser} toggleTheme={() => setDarkMode(!darkMode)} isDarkMode={darkMode} />;
   }
 
   const renderDashboard = () => {

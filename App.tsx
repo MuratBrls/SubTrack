@@ -306,7 +306,7 @@ const App: React.FC = () => {
     );
 
     return (
-      <div className="space-y-6 pb-24">
+      <div className="space-y-6 pb-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div className="bg-white dark:bg-slate-800 overflow-hidden shadow-sm rounded-xl border border-gray-200 dark:border-slate-700 transition-colors">
@@ -372,9 +372,6 @@ const App: React.FC = () => {
           <div className="px-6 py-5 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Your Subscriptions</h3>
-                <Button size="sm" onClick={openAddModal} className="sm:hidden h-10 w-10 rounded-full p-0 flex items-center justify-center">
-                    <Plus className="w-5 h-5" />
-                </Button>
             </div>
             
             <div className="relative w-full sm:max-w-xs">
@@ -478,7 +475,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200 font-sans pb-safe">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200 font-sans">
       {/* Navbar */}
       <nav className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-30 transition-colors pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -493,7 +490,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Install App Button (Only shows if installable) */}
+              {/* Install App Button (Desktop) */}
               {deferredPrompt && (
                 <button
                   onClick={handleInstallClick}
@@ -503,6 +500,25 @@ const App: React.FC = () => {
                   Install App
                 </button>
               )}
+
+              {/* Install Icon (Mobile) */}
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstallClick}
+                  className="sm:hidden p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
+                  title="Install App"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Add Button (Mobile) - Moved to top navbar to replace FAB */}
+              <button 
+                 onClick={openAddModal}
+                 className="sm:hidden p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
+               >
+                 <Plus className="w-6 h-6" />
+              </button>
 
                <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -528,9 +544,9 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Tabs */}
-        <div className="mb-8 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 pb-24 sm:pb-6">
+        {/* Tabs - Desktop Only */}
+        <div className="hidden sm:block mb-8 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
           <nav className="-mb-px flex space-x-8 min-w-full">
             <button
               onClick={() => setActiveTab('dashboard')}
@@ -574,26 +590,46 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Action Button for Mobile */}
-      {activeTab === 'dashboard' && (
-        <div className="fixed bottom-6 right-6 z-40 sm:hidden pb-safe pr-safe flex flex-col gap-3">
-           {deferredPrompt && (
-            <Button 
-              onClick={handleInstallClick} 
-              className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center p-0 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-slate-600"
-              variant="secondary"
-            >
-              <Download className="w-6 h-6" />
-            </Button>
-          )}
-          <Button 
-            onClick={openAddModal} 
-            className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center p-0 bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="w-8 h-8" />
-          </Button>
+      {/* Mobile Bottom Tab Bar (Apple Style) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-t border-gray-200 dark:border-slate-800 pb-safe transition-all duration-300">
+        <div className="flex justify-around items-center h-16 px-2">
+           <button 
+             onClick={() => setActiveTab('dashboard')} 
+             className="flex-1 flex flex-col items-center justify-center py-1 group active:scale-95 transition-transform"
+           >
+              <div className={`p-1 rounded-xl transition-colors`}>
+                  <LayoutDashboard className={`w-6 h-6 ${activeTab === 'dashboard' ? 'text-indigo-600 dark:text-indigo-400 fill-indigo-100/20 dark:fill-indigo-900/20' : 'text-gray-400 dark:text-slate-500'}`} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${activeTab === 'dashboard' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-500'}`}>
+                  Dashboard
+              </span>
+           </button>
+           
+           <button 
+             onClick={() => setActiveTab('analytics')} 
+             className="flex-1 flex flex-col items-center justify-center py-1 group active:scale-95 transition-transform"
+           >
+              <div className={`p-1 rounded-xl transition-colors`}>
+                  <ChartIcon className={`w-6 h-6 ${activeTab === 'analytics' ? 'text-indigo-600 dark:text-indigo-400 fill-indigo-100/20 dark:fill-indigo-900/20' : 'text-gray-400 dark:text-slate-500'}`} strokeWidth={activeTab === 'analytics' ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${activeTab === 'analytics' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-500'}`}>
+                  Analytics
+              </span>
+           </button>
+
+           <button 
+             onClick={() => setActiveTab('history')} 
+             className="flex-1 flex flex-col items-center justify-center py-1 group active:scale-95 transition-transform"
+           >
+              <div className={`p-1 rounded-xl transition-colors`}>
+                  <HistoryIcon className={`w-6 h-6 ${activeTab === 'history' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-500'}`} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${activeTab === 'history' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-500'}`}>
+                  History
+              </span>
+           </button>
         </div>
-      )}
+      </div>
 
       {/* Modals */}
       <Modal

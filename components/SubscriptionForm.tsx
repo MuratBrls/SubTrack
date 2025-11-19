@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Subscription, BillingCycle, Category, Currency, CURRENCY_SYMBOLS } from '../types';
 import Button from './Button';
 import { suggestCategory } from '../services/geminiService';
-import { Sparkles, Shield, Eye, EyeOff, Calendar as CalendarIcon, List } from 'lucide-react';
+import { Sparkles, Shield, Eye, EyeOff, Calendar as CalendarIcon, List, Camera, X } from 'lucide-react';
 
 interface SubscriptionFormProps {
   initialData?: Subscription | null;
@@ -30,6 +30,14 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
 
   const [isAutoCategorizing, setIsAutoCategorizing] = useState(false);
 
+  // Custom Logo State: Initialize with existing if it's not a generated one
+  const [customLogo, setCustomLogo] = useState<string | null>(() => {
+    if (initialData?.logoUrl && !initialData.logoUrl.includes('ui-avatars.com')) {
+        return initialData.logoUrl;
+    }
+    return null;
+  });
+
   // Helper arrays for manual date selection
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const months = [
@@ -46,7 +54,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
       setManualMonth(d.getMonth());
       setManualYear(d.getFullYear());
     }
-  }, []); // Run once on mount or when switching modes conceptually if we wanted strict sync
+  }, []);
 
   const handleManualDateChange = (d: number, m: number, y: number) => {
     setManualDay(d);
@@ -54,9 +62,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
     setManualYear(y);
     
     // Construct YYYY-MM-DD string
-    // Note: Javascript Date month is 0-indexed
     const newDate = new Date(y, m, d);
-    // Use locale time offset trick or manual string construction to avoid timezone issues
     const yearStr = newDate.getFullYear();
     const monthStr = String(newDate.getMonth() + 1).padStart(2, '0');
     const dayStr = String(newDate.getDate()).padStart(2, '0');
@@ -68,14 +74,61 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
     setNextPaymentDate(val);
     const d = new Date(val);
     if (!isNaN(d.getTime())) {
-      setManualDay(d.getUTCDate()); // Use UTC to avoid shifting due to timezone when parsing purely YYYY-MM-DD
+      setManualDay(d.getUTCDate());
       setManualMonth(d.getUTCMonth());
       setManualYear(d.getUTCFullYear());
     }
   };
 
+  // Logo Upload Handler with Resize
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+        alert("File too large. Please select an image under 2MB.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize logic (Max 256px for storage efficiency)
+        const maxSize = 256;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        setCustomLogo(canvas.toDataURL('image/png'));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const finalLogoUrl = customLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Sub')}&background=random&color=fff&size=128`;
+
     onSubmit({
       name,
       price: parseFloat(price),
@@ -85,7 +138,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
       nextPaymentDate,
       accountEmail,
       accountPassword,
-      logoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`
+      logoUrl: finalLogoUrl
     });
   };
 
@@ -98,29 +151,66 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
     setIsAutoCategorizing(false);
   };
 
+  const displayLogo = customLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=random&color=fff&size=128`;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Service Name</label>
-        <div className="mt-1 flex gap-2">
-          <input
-            type="text"
-            id="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
-            placeholder="e.g. Netflix"
-          />
-          <button
-            type="button"
-            onClick={handleAutoCategorize}
-            disabled={!name || isAutoCategorizing}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            title="Auto-categorize with AI"
-          >
-            {isAutoCategorizing ? <span className="animate-spin">⏳</span> : <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />}
-          </button>
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
+        {/* Logo Uploader */}
+        <div className="flex-shrink-0 mx-auto sm:mx-0">
+            <div className="relative group h-20 w-20">
+                <div className="h-20 w-20 rounded-full overflow-hidden border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 shadow-sm">
+                    <img src={displayLogo} alt="Logo Preview" className="h-full w-full object-cover" />
+                </div>
+                
+                {/* Overlay for upload */}
+                <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity duration-200">
+                    <Camera className="w-6 h-6 text-white mb-1" />
+                    <span className="text-[0.6rem] text-white font-medium uppercase">Edit</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+                
+                {/* Remove button if custom */}
+                {customLogo && (
+                    <button 
+                    type="button"
+                    onClick={() => setCustomLogo(null)}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10"
+                    title="Remove custom logo"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {/* Name Input */}
+        <div className="flex-1 w-full">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Service Name</label>
+            <div className="mt-1 flex gap-2">
+                <input
+                type="text"
+                id="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+                placeholder="e.g. Netflix"
+                />
+                <button
+                type="button"
+                onClick={handleAutoCategorize}
+                disabled={!name || isAutoCategorizing}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                title="Auto-categorize with AI"
+                >
+                {isAutoCategorizing ? <span className="animate-spin">⏳</span> : <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />}
+                </button>
+            </div>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-slate-400">
+                Click the icon to upload a custom logo.
+            </p>
         </div>
       </div>
 

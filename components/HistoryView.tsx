@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Subscription, PaymentRecord, CURRENCY_SYMBOLS, CATEGORY_COLORS } from '../types';
-import { History, TrendingDown } from 'lucide-react';
+import { History, TrendingDown, ArrowDownLeft } from 'lucide-react';
 
 interface HistoryViewProps {
   subscriptions: Subscription[];
@@ -19,23 +19,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ subscriptions }) => {
     return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [subscriptions]);
 
-  // Calculate total spent all time (converted loosely to display currency or just raw sum if simple)
-  // For simplicity in this view, we just list them.
-
-  if (allHistory.length === 0) {
-    return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center transition-colors animate-fade-in">
-        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 dark:bg-slate-700 mb-4">
-          <History className="h-8 w-8 text-gray-400 dark:text-slate-500" />
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white">No payment history yet</h3>
-        <p className="mt-2 text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
-          Mark subscriptions as "Paid" in the dashboard to build your history log and track your spending over time.
-        </p>
-      </div>
-    );
-  }
-
   // Group by Month/Year
   const groupedHistory = useMemo(() => {
     const groups: Record<string, PaymentRecord[]> = {};
@@ -48,39 +31,63 @@ const HistoryView: React.FC<HistoryViewProps> = ({ subscriptions }) => {
     return groups;
   }, [allHistory]);
 
+  if (allHistory.length === 0) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-16 text-center transition-colors animate-fade-in">
+        <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gray-50 dark:bg-slate-800 mb-6">
+          <History className="h-10 w-10 text-gray-300 dark:text-slate-600" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white">No payment history</h3>
+        <p className="mt-2 text-gray-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+          Payments will appear here once you mark your subscriptions as paid.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-10 animate-fade-in">
       {Object.keys(groupedHistory).map((groupKey) => (
         <div key={groupKey}>
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3 ml-1">
-            {groupKey}
-          </h3>
-          <div className="bg-white dark:bg-slate-800 shadow-sm rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
-            <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+          <div className="flex items-center gap-4 mb-4">
+             <h3 className="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+              {groupKey}
+            </h3>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800"></div>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
+            <ul className="divide-y divide-gray-100 dark:divide-slate-800">
               {groupedHistory[groupKey].map((record) => (
-                <li key={record.id} className="px-4 sm:px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <li key={record.id} className="group px-6 py-5 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div 
-                        className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center bg-opacity-10"
+                        className="flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                         style={{ 
-                          backgroundColor: `${CATEGORY_COLORS[record.category]}20`,
+                          backgroundColor: `${CATEGORY_COLORS[record.category]}15`,
                           color: CATEGORY_COLORS[record.category]
                         }}
                       >
-                        <TrendingDown className="h-5 w-5" />
+                        <ArrowDownLeft className="h-6 w-6" />
                       </div>
                       <div className="ml-4">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">{record.subscriptionName}</h4>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{new Date(record.date).toLocaleDateString()}</p>
+                        <h4 className="text-base font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {record.subscriptionName}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-medium text-gray-500 dark:text-slate-500">{new Date(record.date).toLocaleDateString()}</span>
+                          <span className="text-xs text-gray-300 dark:text-slate-600">•</span>
+                          <span className="text-xs font-medium text-gray-500 dark:text-slate-500">{record.category}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
                         {CURRENCY_SYMBOLS[record.currency]}{record.amount.toFixed(2)}
                       </p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        Paid
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 mt-1">
+                        Success
                       </span>
                     </div>
                   </div>

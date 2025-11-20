@@ -154,20 +154,21 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
   const displayLogo = customLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=random&color=fff&size=128`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start">
         {/* Logo Uploader */}
-        <div className="flex-shrink-0 mx-auto sm:mx-0">
-            <div className="relative group h-20 w-20">
-                <div className="h-20 w-20 rounded-full overflow-hidden border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 shadow-sm">
+        <div className="flex-shrink-0">
+            <div className="relative group h-24 w-24">
+                <div className="h-24 w-24 rounded-2xl overflow-hidden border-2 border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 shadow-sm">
                     <img src={displayLogo} alt="Logo Preview" className="h-full w-full object-cover" />
                 </div>
                 
                 {/* Overlay for upload */}
-                <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity duration-200">
+                <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-all duration-200 hover:backdrop-blur-sm">
                     <Camera className="w-6 h-6 text-white mb-1" />
-                    <span className="text-[0.6rem] text-white font-medium uppercase">Edit</span>
+                    <span className="text-[0.6rem] text-white font-medium uppercase tracking-wide">Edit</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 </label>
                 
@@ -176,7 +177,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
                     <button 
                     type="button"
                     onClick={() => setCustomLogo(null)}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10 ring-2 ring-white dark:ring-slate-900"
                     title="Remove custom logo"
                     >
                         <X className="w-3 h-3" />
@@ -187,47 +188,47 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
 
         {/* Name Input */}
         <div className="flex-1 w-full">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Service Name</label>
-            <div className="mt-1 flex gap-2">
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Service Name</label>
+            <div className="flex gap-2">
                 <input
                 type="text"
                 id="name"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+                className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-base"
                 placeholder="e.g. Netflix"
                 />
                 <button
                 type="button"
                 onClick={handleAutoCategorize}
                 disabled={!name || isAutoCategorizing}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="flex-shrink-0 inline-flex items-center px-4 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm font-medium rounded-xl text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
                 title="Auto-categorize with AI"
                 >
-                {isAutoCategorizing ? <span className="animate-spin">⏳</span> : <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />}
+                {isAutoCategorizing ? <span className="animate-spin">⏳</span> : <Sparkles className="w-5 h-5" />}
                 </button>
             </div>
-            <p className="mt-1.5 text-xs text-gray-500 dark:text-slate-400">
-                Click the icon to upload a custom logo.
+            <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+                Tip: Enter a name and click the sparkle icon to auto-set the category.
             </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Price</label>
-          <div className="relative mt-1 rounded-md shadow-sm flex">
+          <label htmlFor="price" className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Price</label>
+          <div className="relative rounded-xl shadow-sm flex">
             <div className="absolute inset-y-0 left-0 flex items-center">
                <select
                 id="currency"
                 name="currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as Currency)}
-                className="h-full rounded-md border-transparent bg-transparent py-0 pl-2 pr-7 text-gray-500 dark:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm"
+                className="h-full rounded-l-xl border-transparent bg-gray-50 dark:bg-slate-800 py-0 pl-3 pr-7 text-gray-600 dark:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-medium"
               >
                 {Object.values(Currency).map((c) => (
-                  <option key={c} value={c} className="dark:bg-slate-800">{c}</option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -238,19 +239,19 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
               required
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white pl-20 focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+              className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white pl-24 focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-base"
               placeholder="0.00"
               inputMode="decimal"
             />
           </div>
         </div>
         <div>
-          <label htmlFor="cycle" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Billing Cycle</label>
+          <label htmlFor="cycle" className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Billing Cycle</label>
           <select
             id="cycle"
             value={cycle}
             onChange={(e) => setCycle(e.target.value as BillingCycle)}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+            className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-base"
           >
             {Object.values(BillingCycle).map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -260,15 +261,15 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
       </div>
 
       <div>
-         <div className="flex justify-between items-center mb-1">
-            <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Next Payment</label>
+         <div className="flex justify-between items-center mb-1.5">
+            <label htmlFor="date" className="block text-sm font-semibold text-gray-700 dark:text-slate-300">Next Payment Date</label>
             <button 
               type="button" 
               onClick={() => setDateMode(dateMode === 'picker' ? 'manual' : 'picker')}
-              className="text-xs flex items-center text-indigo-600 dark:text-indigo-400 hover:underline"
+              className="text-xs flex items-center font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
             >
               {dateMode === 'picker' ? <List className="w-3 h-3 mr-1"/> : <CalendarIcon className="w-3 h-3 mr-1"/>}
-              {dateMode === 'picker' ? 'Switch to Manual Selection' : 'Switch to Calendar'}
+              {dateMode === 'picker' ? 'Switch to Manual' : 'Switch to Calendar'}
             </button>
          </div>
 
@@ -279,14 +280,14 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
               required
               value={nextPaymentDate}
               onChange={handlePickerChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+              className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-base"
             />
          ) : (
-           <div className="grid grid-cols-3 gap-2 mt-1">
+           <div className="grid grid-cols-3 gap-2">
               <select
                 value={manualDay}
                 onChange={(e) => handleManualDateChange(Number(e.target.value), manualMonth, manualYear)}
-                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+                className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-sm"
               >
                 {days.map(d => (
                   <option key={d} value={d}>{d}</option>
@@ -295,7 +296,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
               <select
                 value={manualMonth}
                 onChange={(e) => handleManualDateChange(manualDay, Number(e.target.value), manualYear)}
-                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+                className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-sm"
               >
                 {months.map((m, i) => (
                   <option key={i} value={i}>{m}</option>
@@ -304,7 +305,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
               <select
                 value={manualYear}
                 onChange={(e) => handleManualDateChange(manualDay, manualMonth, Number(e.target.value))}
-                className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
+                className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-sm"
               >
                 {years.map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -315,12 +316,12 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
       </div>
 
       <div>
-        <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-slate-300">Category</label>
+        <label htmlFor="category" className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Category</label>
         <select
           id="category"
           value={category}
           onChange={(e) => setCategory(e.target.value as Category)}
-          className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-base sm:text-sm"
+          className="block w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-base"
         >
           {Object.values(Category).map((c) => (
             <option key={c} value={c}>{c}</option>
@@ -328,31 +329,36 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
         </select>
       </div>
       
-      <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-2">
-        <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Credentials (Stored Securely)</h4>
+      {/* Secure Vault Section */}
+      <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700/50">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+            <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Credential Vault</h4>
+          <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-medium">Encrypted</span>
         </div>
-        <div className="space-y-3">
+        
+        <div className="space-y-4">
           <div>
-             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Account Email/Username</label>
+             <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-1">Account Email / Username</label>
              <input
                 type="text"
                 value={accountEmail}
                 onChange={(e) => setAccountEmail(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm"
-                placeholder="Optional"
+                className="block w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-sm"
+                placeholder="user@example.com"
               />
           </div>
           <div>
-             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Account Password</label>
-             <div className="relative mt-1">
+             <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-1">Password</label>
+             <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={accountPassword}
                   onChange={(e) => setAccountPassword(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 text-sm pr-10"
-                  placeholder="Optional"
+                  className="block w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2.5 text-sm pr-10"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
@@ -366,9 +372,9 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({ initialData, onSubm
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 mt-6">
-        <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
-        <Button type="submit">Save</Button>
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="secondary" type="button" onClick={onCancel} className="px-6">Cancel</Button>
+        <Button type="submit" className="px-6">Save Subscription</Button>
       </div>
     </form>
   );

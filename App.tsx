@@ -1,20 +1,31 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, LogOut, Bell, Moon, Sun, Download, Key, Zap, Search, CheckCircle, History as HistoryIcon } from 'lucide-react';
+import { Plus, Trash2, Edit2, CreditCard, Calendar, LayoutDashboard, PieChart as ChartIcon, Bell, Moon, Sun, Download, Key, Zap, Search, CheckCircle, History as HistoryIcon } from 'lucide-react';
 import { Subscription, CATEGORY_COLORS, BillingCycle, User, Currency, CURRENCY_SYMBOLS, PaymentRecord } from './types';
 import Modal from './components/Modal';
 import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
 import HistoryView from './components/HistoryView';
 import Button from './components/Button';
-import AuthComponent from './components/Auth';
 import VaultModal from './components/VaultModal';
 import CredentialsModal from './components/CredentialsModal';
 import { storageService } from './services/storageService';
-import { auth, onAuthStateChanged, signOut } from './services/firebase';
 
 const App: React.FC = () => {
-  // Initialize user from localStorage to prevent flash of login screen on reload
-  const [user, setUser] = useState<User | null>(() => storageService.getCurrentUser());
+  const LOCAL_USER_ID = 'default_local_user';
+
+  // Initialize user state with a default local user
+  const [user, setUser] = useState<User>(() => {
+    // Check if a PIN exists for the default local user to set the 'hasVaultPin' flag correctly
+    const hasPin = typeof window !== 'undefined' && !!localStorage.getItem(`subtrack_vault_pin_${LOCAL_USER_ID}`);
+    
+    return {
+        id: LOCAL_USER_ID,
+        email: 'local@app',
+        name: 'My Subscriptions',
+        hasVaultPin: hasPin
+    };
+  });
 
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -24,15 +35,10 @@ const App: React.FC = () => {
     return false;
   });
 
-  // FIX: Initialize subscriptions from storage if user exists.
-  // If we start with [], the useEffect that saves to localStorage will overwrite existing data on first render.
+  // Initialize subscriptions from local storage using the default ID
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
     if (typeof window === 'undefined') return [];
-    const currentUser = storageService.getCurrentUser();
-    if (currentUser) {
-      return storageService.getSubscriptions(currentUser.id);
-    }
-    return [];
+    return storageService.getSubscriptions(LOCAL_USER_ID);
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,37 +87,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // 1. Auth Persistence Listener (Firebase)
-  useEffect(() => {
-    if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-          // Sync Firebase session to local app state
-          const appUser: User = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-            // Check vault status from local storage as it's device specific in this hybrid model
-            hasVaultPin: storageService.validateVaultPin(firebaseUser.uid, '') ? false : !!localStorage.getItem(`subtrack_vault_pin_${firebaseUser.uid}`)
-          };
-          
-          setUser(appUser);
-        } else {
-          // If Firebase explicitly says no user (logout or session expired), clear local state
-          setUser(null);
-          storageService.setCurrentUser(null);
-        }
-      });
-      return () => unsubscribe();
-    }
-  }, []);
-
-  // 2. Generic Persistence Listener
-  // Ensures that whenever 'user' state changes (Mock or Real), it is saved to localStorage.
-  useEffect(() => {
-    storageService.setCurrentUser(user);
-  }, [user]);
-
   // Robust helper for date calculation (handles local time properly)
   const getDaysUntilDue = (dateStr: string) => {
     const today = new Date();
@@ -127,11 +102,8 @@ const App: React.FC = () => {
     return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // Effect to load data when user changes and check for reminders
+  // Effect to load data and check for reminders
   useEffect(() => {
-    if (user) {
-      // We load from storage here to ensure sync, even though we initialized state from storage.
-      // This handles cases where user switches accounts or data changed externally.
       const loadedSubs = storageService.getSubscriptions(user.id);
       setSubscriptions(loadedSubs);
 
@@ -145,32 +117,12 @@ const App: React.FC = () => {
         setUpcomingSubs(upcoming);
         setIsReminderOpen(true);
       }
-    } else {
-      setSubscriptions([]);
-    }
-  }, [user?.id]); // Only reload if user ID changes
+  }, [user.id]);
 
   // Persist subscriptions to storageService whenever they change
   useEffect(() => {
-    if (user) {
-      // IMPORTANT: This writes current state to storage. 
-      // Because we initialized 'subscriptions' from storage (see useState above), 
-      // the first run of this effect writes the same data back, protecting it.
       storageService.saveSubscriptions(user.id, subscriptions);
-    }
-  }, [subscriptions, user]);
-
-  const handleLogout = async () => {
-    if (auth) {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("Error signing out", error);
-      }
-    }
-    setUser(null);
-    // storageService.setCurrentUser(null) is handled by the useEffect on [user]
-  };
+  }, [subscriptions, user.id]);
 
   const handleAddSubscription = (data: Omit<Subscription, 'id'>) => {
     const newSub: Subscription = {
@@ -273,11 +225,7 @@ const App: React.FC = () => {
   const onVaultSuccess = () => {
     setIsVaultModalOpen(false);
     // Ensure user knows they have a PIN set now if it was setup
-    if (user && !user.hasVaultPin) {
-        // Re-read from storage to get updated status
-        const updatedUser = storageService.getCurrentUser();
-        if(updatedUser) setUser(updatedUser);
-    }
+    setUser(prev => ({ ...prev, hasVaultPin: true }));
     setIsCredentialsModalOpen(true);
   };
 
@@ -291,10 +239,6 @@ const App: React.FC = () => {
         return acc + cost;
       }, 0);
   };
-
-  if (!user) {
-    return <AuthComponent onLogin={setUser} toggleTheme={() => setDarkMode(!darkMode)} isDarkMode={darkMode} />;
-  }
 
   const renderDashboard = () => {
     const totalUSD = calculateTotalMonthly(Currency.USD);
@@ -527,18 +471,11 @@ const App: React.FC = () => {
               >
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-
-              <div className="hidden md:flex flex-col items-end mr-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-200">{user.name}</span>
-                <span className="text-xs text-gray-400 dark:text-slate-500">{user.email}</span>
-              </div>
+              
               <Button onClick={openAddModal} className="hidden sm:flex">
                 <Plus className="w-4 h-4 mr-2" />
                 <span>Add</span>
               </Button>
-              <button onClick={handleLogout} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 p-2 transition-colors touch-manipulation">
-                <LogOut className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
@@ -701,7 +638,6 @@ const App: React.FC = () => {
                     <button
                           onClick={() => {
                             handleMarkAsPaid(sub);
-                            // Optional: remove from reminder list if we wanted to get fancy, but state update will handle refreshing logic next load
                           }}
                           className="text-gray-300 hover:text-green-600 dark:text-slate-600 dark:hover:text-green-400 transition-colors p-1 rounded-full"
                           title="Mark as Paid"

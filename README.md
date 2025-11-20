@@ -1,130 +1,137 @@
 # SubTrack AI 🚀
 
-SubTrack AI is a modern, intelligent subscription tracking dashboard built as a Progressive Web App (PWA). It helps users manage recurring payments, visualize spending habits, and get AI-powered insights using Google's Gemini API.
-
-It features a secure **Vault system** for storing subscription credentials and supports **Real-time Authentication** via Google and Apple (Firebase).
+**SubTrack AI** is a comprehensive, cross-platform subscription tracking ecosystem designed to help you take control of your recurring expenses. It combines a modern **Web Dashboard** (PWA) and a native **Mobile App** (React Native/Expo) powered by **Google Gemini AI** to provide intelligent insights into your spending habits.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-18-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Tailwind](https://img.shields.io/badge/Tailwind-CSS-38bdf8)
-![Firebase](https://img.shields.io/badge/Firebase-Auth-orange)
+![React](https://img.shields.io/badge/React-19-blue)
+![React Native](https://img.shields.io/badge/React_Native-0.74-61DAFB)
+![Expo](https://img.shields.io/badge/Expo-51-black)
+![Gemini](https://img.shields.io/badge/AI-Google_Gemini-8E75B2)
 
 ## ✨ Key Features
 
-### 📊 Smart Management
-- **Dashboard:** Track monthly and yearly expenses in mixed currencies (USD, EUR, TRY).
-- **Visual Analytics:** Interactive charts showing spending distribution by category.
-- **Gemini AI Integration:** Gets personalized spending insights, savings tips, and automatic category suggestions based on service names.
+### 🧠 AI-Powered Intelligence
+- **Smart Analysis:** Generates personalized spending reports and savings tips using Google Gemini Models.
+- **Auto-Categorization:** Automatically detects categories (Entertainment, Utilities, etc.) based on the subscription name.
+- **Spending Forecast:** Estimates monthly and yearly costs across different currencies (USD, EUR, TRY).
 
-### 🔒 Security & Vault
-- **Credential Vault:** Securely store email/usernames and passwords for each subscription.
-- **PIN Protection:** A secondary, 4-digit PIN is required to unlock and view credentials, adding an extra layer of security beyond the login screen.
-- **Copy-to-Clipboard:** Easy one-tap copy for stored credentials.
+### 🔒 Security Vault
+- **Credential Storage:** Securely store login details (email/password) for each subscription.
+- **Double Encryption Layer:** Access to the vault requires a user-defined **4-digit PIN**, adding a second layer of security beyond the app login.
+- **Local & Secure:** Sensitive data is handled with strict security practices.
 
-### 🔐 Authentication
-- **Social Login:** Native integration with **Google** and **Apple** Sign-In via Firebase Authentication.
-- **Data Persistence:** User data is synced with their account ID.
+### 📱 Cross-Platform Experience
+- **Web App (PWA):** Fully responsive React application with dark mode, charts, and comprehensive management tools.
+- **Mobile App:** Native iOS and Android experience built with Expo, featuring smooth gestures and offline capabilities.
 
-### 📱 PWA Experience
-- **Installable:** Works like a native app on iOS and Android.
-- **Offline Ready:** Caches core assets for faster loading.
-- **Dark Mode:** Fully supported dark/light themes.
+### 📊 Analytics & Management
+- **Visual Charts:** Interactive pie charts breakdown spending by category.
+- **Payment History:** Track past payments and due dates.
+- **Multi-Currency:** Support for global currencies with automatic normalization for totals.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-- **Frontend:** React, TypeScript, Vite (implied environment)
+### Web (Frontend)
+- **Framework:** React 19, Vite
+- **Language:** TypeScript
 - **Styling:** Tailwind CSS
-- **AI:** Google Gemini API (`@google/genai`)
-- **Auth:** Firebase Authentication (Google & Apple Providers)
-- **Icons:** Lucide React
-- **Charts:** Recharts
+- **State/Storage:** LocalStorage (with sync logic) & Firebase Auth
+
+### Mobile
+- **Framework:** React Native, Expo SDK 51
+- **Navigation:** React Navigation (Bottom Tabs)
+- **Storage:** Async Storage
+
+### Services
+- **AI:** Google GenAI SDK (`gemini-2.5-flash`)
+- **Auth:** Firebase (Google, Apple, Email/Password)
+- **Icons:** Lucide React / Lucide React Native
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Configuration
+This repository contains both the web application and the mobile application.
 
-This project requires two main API configurations to function fully: **Firebase** (for Auth) and **Gemini** (for AI).
+### Prerequisites
+- Node.js (v18 or higher)
+- NPM or Yarn
+- A Google Gemini API Key
+- A Firebase Project (optional for Auth, required for cloud sync)
 
-#### A. Firebase Setup (Authentication)
-1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Create a new project.
-3. Navigate to **Build > Authentication > Sign-in method**.
-4. Enable **Google** and **Apple** providers.
-5. Go to **Project Settings > General** and create a "Web App".
-6. Copy the `firebaseConfig` object.
-7. Open `services/firebase.ts` in this project and replace the placeholder config:
+### 1. Web Application Setup
 
-```typescript
-// services/firebase.ts
-const firebaseConfig = {
-  apiKey: "YOUR_REAL_FIREBASE_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  // ... other fields
-};
-```
-
-#### B. Gemini AI Setup
-The project expects a Google GenAI API key to provide insights.
-1. Get an API key from [Google AI Studio](https://aistudio.google.com/).
-2. Ensure the API key is available in your environment variables as `API_KEY`.
-
-### 2. Installation
+The web app is located in the root directory.
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/subtrack-ai.git
+# Install dependencies
+npm install
 
-# Navigate into the directory
-cd subtrack-ai
+# Configure Environment
+# Create a .env file or set process.env.API_KEY in your environment variables for Gemini AI.
+
+# Start Development Server
+npm run dev
+```
+
+### 2. Mobile Application Setup
+
+The mobile app is located in the `mobile/` folder.
+
+```bash
+# Navigate to mobile folder
+cd mobile
 
 # Install dependencies
 npm install
 
-# Start the development server
-npm start
+# Start Expo
+npx expo start -c
 ```
+*Use the Expo Go app on your phone to scan the QR code, or run on an emulator (Android Studio / Xcode).*
 
 ---
 
-## 📖 Usage Guide
+## ⚙️ Configuration
 
-### Adding a Subscription
-1. Click the **"Add"** or **"+"** button.
-2. Enter the service name (e.g., Netflix). The AI will attempt to auto-categorize it.
-3. Enter price, currency, and billing cycle.
-4. (Optional) Add login credentials for the "Vault".
+### AI Setup (Gemini)
+To enable the "Analyze" and "Auto-Categorize" features, you need a Google Gemini API Key.
+1. Get a key from [Google AI Studio](https://aistudio.google.com/).
+2. Ensure `process.env.API_KEY` is accessible in `services/geminiService.ts`.
 
-### Using the Vault
-1. In the dashboard list, click the **Key icon** next to a subscription.
-2. If it's your first time, you will be asked to set a **4-digit Vault PIN**.
-3. This PIN is independent of your Google/Apple login password.
-4. Once entered correctly, you can view or copy your saved passwords.
-
-### AI Analysis
-1. Go to the **Analytics** tab.
-2. Click **"AI Spending Analysis"**.
-3. The Gemini model will analyze your subscriptions and provide actionable tips to save money.
+### Firebase Setup (Auth)
+To enable real authentication:
+1. Create a project at [Firebase Console](https://console.firebase.google.com/).
+2. Enable Auth providers (Google, Apple, Email).
+3. Update `services/firebase.ts` with your config object.
 
 ---
+
+## 📸 Project Structure
+
+```
+subtrack-ai/
+├── components/         # Shared React Web Components (Charts, Modals, Vault)
+├── services/           # Shared Logic (Gemini AI, Firebase, Storage)
+├── mobile/             # React Native Expo Project
+│   ├── screens/        # Mobile Screens (Dashboard, Add)
+│   └── App.tsx         # Mobile Entry Point
+├── index.tsx           # Web Entry Point
+└── types.ts            # Shared TypeScript Interfaces
+```
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome!
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the project.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
-
----
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the MIT License.

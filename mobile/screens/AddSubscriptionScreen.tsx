@@ -43,7 +43,7 @@ export default function AddSubscriptionScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -62,7 +62,7 @@ export default function AddSubscriptionScreen({ navigation }: any) {
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+            <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
               <Text style={styles.label}>Price</Text>
               <TextInput
                 style={styles.input}
@@ -73,11 +73,18 @@ export default function AddSubscriptionScreen({ navigation }: any) {
               />
             </View>
             
-            {/* Simple Currency Selector UI */}
             <View style={[styles.formGroup, { width: 100 }]}>
                <Text style={styles.label}>Currency</Text>
                <View style={styles.pickerContainer}>
-                  <Text style={styles.pickerValue}>{currency}</Text>
+                  <TouchableOpacity onPress={() => {
+                     // Simple cycle for demo purposes, better to use a modal in prod
+                     const currencies = Object.values(Currency);
+                     const currentIndex = currencies.indexOf(currency);
+                     const nextIndex = (currentIndex + 1) % currencies.length;
+                     setCurrency(currencies[nextIndex]);
+                  }}>
+                     <Text style={styles.pickerValue}>{currency}</Text>
+                  </TouchableOpacity>
                </View>
             </View>
           </View>
@@ -98,6 +105,27 @@ export default function AddSubscriptionScreen({ navigation }: any) {
                     styles.chipText,
                     category === cat && { color: '#ffffff' }
                   ]}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+           <View style={styles.formGroup}>
+            <Text style={styles.label}>Billing Cycle</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+              {Object.values(BillingCycle).map((c) => (
+                <TouchableOpacity 
+                  key={c} 
+                  onPress={() => setCycle(c)}
+                  style={[
+                    styles.chip, 
+                    cycle === c && { backgroundColor: '#4f46e5', borderColor: '#4f46e5' }
+                  ]}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    cycle === c && { color: '#ffffff' }
+                  ]}>{c}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -130,15 +158,16 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 32,
     color: '#1e293b',
   },
   formGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   row: {
     flexDirection: 'row',
@@ -148,6 +177,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748b',
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: '#f8fafc',
@@ -165,17 +196,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   pickerValue: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#0f172a',
   },
   chipsContainer: {
     flexDirection: 'row',
+    marginHorizontal: -4,
   },
   chip: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -184,7 +218,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#64748b',
   },
   saveButton: {
@@ -192,11 +226,12 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 12,
     shadowColor: '#4f46e5',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    elevation: 5,
   },
   saveButtonText: {
     color: '#ffffff',

@@ -24,13 +24,14 @@ export default function App() {
             tabBarStyle: {
               borderTopColor: '#e2e8f0',
               backgroundColor: '#ffffff',
-              height: 85,
+              height: 90,
               paddingTop: 10,
+              paddingBottom: 30,
             },
             tabBarLabelStyle: {
               fontSize: 12,
-              marginBottom: 10,
               fontWeight: '500',
+              marginTop: 4,
             }
           }}
         >
@@ -38,7 +39,7 @@ export default function App() {
             name="Dashboard" 
             component={DashboardScreen} 
             options={{
-              tabBarIcon: ({ color }) => <LayoutDashboard size={24} color={color} />,
+              tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
               tabBarLabel: 'Home'
             }}
           />
@@ -46,7 +47,7 @@ export default function App() {
             name="Add" 
             component={AddSubscriptionScreen} 
             options={{
-              tabBarIcon: ({ color }) => <PlusCircle size={24} color={color} />,
+              tabBarIcon: ({ color, size }) => <PlusCircle size={size} color={color} />,
               tabBarLabel: 'Add New'
             }}
           />

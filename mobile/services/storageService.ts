@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Subscription } from '../types';
 
-const DATA_KEY = 'subtrack_mobile_data';
+const DATA_KEY = 'subtrack_mobile_data_v1';
 
 export const storageService = {
   getSubscriptions: async (): Promise<Subscription[]> => {

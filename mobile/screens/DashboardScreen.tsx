@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { storageService } from '../services/storageService';
@@ -27,9 +27,22 @@ export default function DashboardScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const updated = await storageService.deleteSubscription(id);
-    setSubscriptions(updated);
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      "Delete Subscription",
+      "Are you sure you want to delete this?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            const updated = await storageService.deleteSubscription(id);
+            setSubscriptions(updated);
+          }
+        }
+      ]
+    );
   };
 
   // Metrics
@@ -64,7 +77,7 @@ export default function DashboardScreen() {
       <View style={styles.cardFooter}>
         <Text style={styles.dateText}>Next: {item.nextPaymentDate}</Text>
         <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
-            <Trash2 size={16} color="#ef4444" />
+            <Trash2 size={18} color="#ef4444" />
         </TouchableOpacity>
       </View>
     </View>
@@ -97,6 +110,7 @@ export default function DashboardScreen() {
         ListEmptyComponent={
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No subscriptions yet.</Text>
+                <Text style={styles.emptySubText}>Tap the + button to add one.</Text>
             </View>
         }
       />
@@ -161,6 +175,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 20,
+    flexGrow: 1,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -168,10 +183,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -186,6 +201,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     overflow: 'hidden',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   logo: {
     width: '100%',
@@ -198,7 +215,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   badge: {
     alignSelf: 'flex-start',
@@ -222,15 +239,16 @@ const styles = StyleSheet.create({
   cycleText: {
     fontSize: 12,
     color: '#64748b',
+    fontWeight: '500',
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#f8fafc',
   },
   dateText: {
     fontSize: 12,
@@ -238,14 +256,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   deleteBtn: {
-    padding: 4,
+    padding: 8,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
   },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
+    marginTop: 40,
   },
   emptyText: {
+    color: '#64748b',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubText: {
     color: '#94a3b8',
-    fontSize: 16,
+    fontSize: 14,
   }
 });

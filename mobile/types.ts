@@ -25,15 +25,6 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   [Currency.TRY]: '₺'
 };
 
-export interface PaymentRecord {
-  id: string;
-  date: string;
-  amount: number;
-  currency: Currency;
-  subscriptionName: string;
-  category: Category;
-}
-
 export interface Subscription {
   id: string;
   name: string;
@@ -42,10 +33,7 @@ export interface Subscription {
   cycle: BillingCycle;
   nextPaymentDate: string;
   category: Category;
-  description?: string;
   logoUrl?: string;
-  accountEmail?: string;
-  accountPassword?: string;
 }
 
 export const CATEGORY_COLORS: Record<Category, string> = {

@@ -7,7 +7,6 @@ import SubscriptionForm from './components/SubscriptionForm';
 import Analytics from './components/Analytics';
 import HistoryView from './components/HistoryView';
 import Button from './components/Button';
-import VaultModal from './components/VaultModal';
 import CredentialsModal from './components/CredentialsModal';
 import { storageService } from './services/storageService';
 
@@ -15,16 +14,11 @@ const App: React.FC = () => {
   const LOCAL_USER_ID = 'default_local_user';
 
   // Initialize user state with a default local user
-  const [user, setUser] = useState<User>(() => {
-    // Check if a PIN exists for the default local user to set the 'hasVaultPin' flag correctly
-    const hasPin = typeof window !== 'undefined' && !!localStorage.getItem(`subtrack_vault_pin_${LOCAL_USER_ID}`);
-    
-    return {
-        id: LOCAL_USER_ID,
-        email: 'local@app',
-        name: 'My Subscriptions',
-        hasVaultPin: hasPin
-    };
+  const [user, setUser] = useState<User>({
+    id: LOCAL_USER_ID,
+    email: 'local@app',
+    name: 'My Subscriptions',
+    hasVaultPin: false // PIN logic removed
   });
 
   const [darkMode, setDarkMode] = useState(() => {
@@ -49,7 +43,6 @@ const App: React.FC = () => {
   const [upcomingSubs, setUpcomingSubs] = useState<Subscription[]>([]);
   
   // Vault States
-  const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
   const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
   const [vaultTargetSub, setVaultTargetSub] = useState<Subscription | null>(null);
 
@@ -216,16 +209,9 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Vault Logic
+  // Vault Logic - DIRECT ACCESS (No PIN)
   const openVault = (sub: Subscription) => {
     setVaultTargetSub(sub);
-    setIsVaultModalOpen(true);
-  };
-
-  const onVaultSuccess = () => {
-    setIsVaultModalOpen(false);
-    // Ensure user knows they have a PIN set now if it was setup
-    setUser(prev => ({ ...prev, hasVaultPin: true }));
     setIsCredentialsModalOpen(true);
   };
 
@@ -579,21 +565,6 @@ const App: React.FC = () => {
           onSubmit={editingSub ? handleEditSubscription : handleAddSubscription}
           onCancel={() => setIsModalOpen(false)}
         />
-      </Modal>
-
-      {/* Vault PIN Modal */}
-      <Modal
-        isOpen={isVaultModalOpen}
-        onClose={() => setIsVaultModalOpen(false)}
-        title=""
-      >
-        {user && (
-          <VaultModal 
-            user={user} 
-            onSuccess={onVaultSuccess} 
-            onCancel={() => setIsVaultModalOpen(false)} 
-          />
-        )}
       </Modal>
 
       {/* Credentials Display Modal */}
